@@ -171,6 +171,8 @@ subject= /O=GRID-FR/C=FR/O=CNRS/OU=IdG/CN=ccnagboxfg.in2p3.fr
 
 ### Nagios
 
+Note : A git-repository is created/synced at `https://gitlab.in2p3.fr/vinc/nagboxfg-config` to track configuration changes
+
 ```
 # Configure nagioadmin password
 htpasswd -c /etc/nagios/passwd nagiosadmin
@@ -178,6 +180,7 @@ htpasswd -c /etc/nagios/passwd nagiosadmin
 # Add GRID-FR users
 echo "/O=GRID-FR/C=FR/O=CNRS/OU=IPHC/CN=Jerome Pansanel:xxj31ZMTZzkVA\n/O=GRID-FR/C=FR/O=CNRS/OU=IdG/CN=Vincent Gatignol-Jamon:xxj31ZMTZzkVA" >> /etc/nagios/passwd
 ```
+Note : the password for x509 users must be "xxj31ZMTZzkVA"
 
 Some config tweaks `/etc/nagios/nagios.cfg`
 ```
@@ -218,45 +221,10 @@ RedirectMatch ^/$ /nagios/
 ```
 
 ### PerfData
-```
-yum install perl-CGI rrdtool-perl perl-GD
-wget -O nagios-graph-1.5.2.tgz "https://sourceforge.net/projects/nagiosgraph/files/nagiosgraph/1.5.2/nagiosgraph-1.5.2.tar.gz/download"
-tar -xvzf nagios-graph-1.5.2.tgz && cd nagiosgraph-1.5.2
-./install.pl
-```
 
--> Default answers are ok
-
--> Let the script update nagios and httpd configuration files
-
-`/etc/httpd/conf.d/nagiosgraph.conf`
-Add this snippet to the two <Directory> statements to enable x509 auth
+We will be using pnp4nagios with its "Bulk mode with NPCD" configuration (https://docs.pnp4nagios.org/pnp-0.6/modes#bulk_mode_with_npcd)
 ```
-   AuthName "Nagios Access"
-   AuthType Basic
-   AuthUserFile /etc/nagios/passwd
-   <IfModule mod_authz_core.c>
-      # Apache 2.4
-      <RequireAll>
-         Require all granted
-         # Require local
-         Require valid-user
-      </RequireAll>
-   </IfModule>
-   <IfModule !mod_authz_core.c>
-      # Apache 2.2
-      Order allow,deny
-      Allow from all
-      #  Order deny,allow
-      #  Deny from all
-      #  Allow from 127.0.0.1
-      Require valid-user
-   </IfModule>
-```
-
-Create the file `/usr/share/nagios/html/ssi/common-header.ssi`
-```
-<script type="text/javascript" src="/nagiosgraph/nagiosgraph.js"></script>
+yum install pnp4nagios
 ```
 
 Update the nagios templates to include perfdata
@@ -273,7 +241,7 @@ define service{
 Add `action_url` to the host-template
 ```
 define host{
-+++     action_url                      /nagiosgraph/cgi-bin/showhost.cgi?host=$HOSTNAME$' onMouseOver='showGraphPopup(this)' onMouseOut='hideGraphPopup()' rel='/nagiosgraph/cgi-bin/showgraph.cgi?host=$HOSTNAME$
++++     action_url                      /pnp4nagios/index.php/graph?host=$HOSTNAME$&srv=_HOST_' class='tips' rel='/pnp4nagios/index.php/popup?host=$HOSTNAME$&srv=_HOST_
         (...)
         register                        0
 }
@@ -282,8 +250,112 @@ Add a graph-service-template
 ```
 +++define service{
 +++        name                            graph
-+++        action_url                      /nagiosgraph/cgi-bin/show.cgi?host=$HOSTNAME$&service=$SERVICEDESC$' onMouseOver='showGraphPopup(this)' onMouseOut='hideGraphPopup()' rel='/nagiosgraph/cgi-bin/showgraph.cgi?host=$HOSTNAME$&service=$SERVICEDESC$
++++        action_url                      /pnp4nagios/index.php/graph?host=$HOSTNAME$&srv=$SERVICEDESC$' class='tips' rel='/pnp4nagios/index.php/popup?host=$HOSTNAME$&srv=$SERVICEDESC$
 +++        register                        0
 +++        }
 ```
+Add pnp4nagios commands
+```
+# pnp4nagios
+#
+# Bulk with NPCD mode
+#
+ define command {
+       command_name    process-service-perfdata-file
+       command_line    /bin/mv /var/log/pnp4nagios/service-perfdata /var/spool/pnp4nagios/service-perfdata.$TIMET$
+ }
 
+define command {
+       command_name    process-host-perfdata-file
+       command_line    /bin/mv /var/log/pnp4nagios/host-perfdata /var/spool/pnp4nagios/host-perfdata.$TIMET$
+}
+```
+Create/Link the file from `/etc/nagios/pnp4nagios/common-header.ssi` to `/usr/share/nagios/html/ssi/common-header.ssi`
+```
+<script src="/pnp4nagios/media/js/jquery-min.js" type="text/javascript"></script>
+<script src="/pnp4nagios/media/js/jquery.cluetip.js" type="text/javascript"></script>
+<script type="text/javascript">
+jQuery.noConflict();
+jQuery(document).ready(function() {
+  jQuery('a.tips').cluetip({ajaxCache: false, dropShadow: false,showTitle: false });
+});
+</script>
+```
+Update `/etc/nagios/nagios.cfg`
+```
+# pnp4nagios
+process_performance_data=1
+
+#
+# Bulk / NPCD mode
+# 
+
+# *** the template definition differs from the one in the original nagios.cfg
+#
+service_perfdata_file=/var/log/pnp4nagios/service-perfdata
+service_perfdata_file_template=DATATYPE::SERVICEPERFDATA\tTIMET::$TIMET$\tHOSTNAME::$HOSTNAME$\tSERVICEDESC::$SERVICEDESC$\tSERVICEPERFDATA::$SERVICEPERFDATA$\tSERVICECHECKCOMMAND::$SERVICECHECKCOMMAND$\tHOSTSTATE::$HOSTSTATE$\tHOSTSTATETYPE::$HOSTSTATETYPE$\tSERVICESTATE::$SERVICESTATE$\tSERVICESTATETYPE::$SERVICESTATETYPE$
+service_perfdata_file_mode=a
+service_perfdata_file_processing_interval=15
+service_perfdata_file_processing_command=process-service-perfdata-file
+
+# *** the template definition differs from the one in the original nagios.cfg
+#
+host_perfdata_file=/var/log/pnp4nagios/host-perfdata
+host_perfdata_file_template=DATATYPE::HOSTPERFDATA\tTIMET::$TIMET$\tHOSTNAME::$HOSTNAME$\tHOSTPERFDATA::$HOSTPERFDATA$\tHOSTCHECKCOMMAND::$HOSTCHECKCOMMAND$\tHOSTSTATE::$HOSTSTATE$\tHOSTSTATETYPE::$HOSTSTATETYPE$
+host_perfdata_file_mode=a
+host_perfdata_file_processing_interval=15
+host_perfdata_file_processing_command=process-host-perfdata-file
+```
+Activate Bulk/NPCD service
+```
+chkconfig --add npcd
+chkconfig npcd on
+systemctl start npcd
+```
+Create/Link the templates from `/etc/nagios/pnp4nagios-templates/check_openstack.php` 
+```
+# ls -l /usr/share/nagios/html/pnp4nagios/templates/    
+total 0
+lrwxrwxrwx 1 root root   42  1 juin  16:42 check_isolation.php -> /etc/nagios/pnp4nagios/check_openstack.php
+lrwxrwxrwx 1 root root   42  1 juin  16:42 check_openstack.php -> /etc/nagios/pnp4nagios/check_openstack.php
+lrwxrwxrwx 1 root root   42  1 juin  16:52 check_openstack_regex.php -> /etc/nagios/pnp4nagios/check_openstack.php
+```
+```
+<?php
+##
+$ds_name[1] = "Execution Time";
+$opt[1] = "--vertical-label \"Time ($UNIT[1])\" --title \"Execution Time for $hostname / $servicedesc\" ";
+#
+$def[1] =  "DEF:exec_time=$RRDFILE[1]:$DS[1]:AVERAGE " ;
+$def[1] .= "AREA:exec_time#0000FF:\"Execution Time \" " ;
+$def[1] .= "LINE1:exec_time#000000 " ;
+$def[1] .= rrd::gprint("exec_time", array("LAST", "MAX", "AVERAGE"), "%3.0lf $UNIT[1]") ;
+##
+$ds_name[2] = "Number of tests";
+$opt[2] = "--vertical-label \"Count\" --title \"Number of tests for $hostname / $servicedesc\" ";
+#
+$def[2] =  "DEF:nb_tests=$RRDFILE[1]:$DS[2]:AVERAGE " ;
+$def[2] .= "AREA:nb_tests#AABBCC:\"Total   \" " ;
+$def[2] .= "LINE1:nb_tests#AABBCC " ;
+$def[2] .= rrd::gprint("nb_tests", array("LAST", "MAX", "AVERAGE"), "%3.0lf $UNIT[2]") ;
+#
+$def[2] .= "DEF:nb_tests_ok=$RRDFILE[1]:$DS[3]:AVERAGE " ;
+$def[2] .= "AREA:nb_tests_ok#00FF00:\"OK      \" " ;
+$def[2] .= "LINE1:nb_tests_ok#00FF00 " ;
+$def[2] .= rrd::gprint("nb_tests_ok", array("LAST", "MAX", "AVERAGE"), "%3.0lf $UNIT[2]") ;
+#
+$def[2] .= "DEF:nb_tests_ko=$RRDFILE[1]:$DS[4]:AVERAGE " ;
+$def[2] .= "AREA:nb_tests_ko#FF0000:\"NOK     \" " ;
+$def[2] .= "LINE1:nb_tests_ko#FF0000 " ;
+$def[2] .= rrd::gprint("nb_tests_ko", array("LAST", "MAX", "AVERAGE"), "%3.0lf $UNIT[2]") ;
+#
+$def[2] .= "DEF:nb_skipped=$RRDFILE[1]:$DS[5]:AVERAGE " ;
+$def[2] .= "AREA:nb_skipped#0000FF:\"Skipped \" " ;
+$def[2] .= "LINE1:nb_skipped#0000FF " ;
+$def[2] .= rrd::gprint("nb_skipped", array("LAST", "MAX", "AVERAGE"), "%3.0lf $UNIT[2]") ;
+?>
+```
+### (Re)start services
+```
+systemctl restart httpd nagios npcd
+```
