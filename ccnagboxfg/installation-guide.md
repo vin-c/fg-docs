@@ -124,12 +124,6 @@ systemctl restart firewalld
 ### Packages installation
 
 ```
-# Get iRODS binaries
-mkdir /root/irods-rpm
-cd /root/irods-rpm
-wget http://www.grand-est.fr/yum/irods/sl7/x86_64/irods-client-gsi-3.3-3.el7.centos.x86_64.rpm
-wget http://www.grand-est.fr/yum/irods/sl7/x86_64/irods-3.3-3.el7.centos.x86_64.rpm
-
 # Add EGI-Trustanchors repository
 wget -O /etc/yum.repos.d/EGI-trustanchors.repo http://repository.egi.eu/sw/production/cas/1/current/repo-files/EGI-trustanchors.repo
 
@@ -138,7 +132,6 @@ useradd -r -d /var/spool/nagios -s /sbin/nologin nagios
 
 # Update and Install
 yum update && yum install -y mod_ssl nagios nagios-plugins ca-policy-egi-core
-yum localinstall -y irods-3.3-3.el7.centos.x86_64.rpm irods-client-gsi-3.3-3.el7.centos.x86_64.rpm
 ```
 
 ### Certificate request
