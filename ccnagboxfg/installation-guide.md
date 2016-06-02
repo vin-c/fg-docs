@@ -134,7 +134,7 @@ wget http://www.grand-est.fr/yum/irods/sl7/x86_64/irods-3.3-3.el7.centos.x86_64.
 wget -O /etc/yum.repos.d/EGI-trustanchors.repo http://repository.egi.eu/sw/production/cas/1/current/repo-files/EGI-trustanchors.repo
 
 # Add a nagios user (not done when installing package)
-useradd -r nagios
+useradd -r -d /var/spool/nagios -s /sbin/nologin nagios
 
 # Update and Install
 yum update && yum install -y mod_ssl nagios nagios-plugins ca-policy-egi-core
