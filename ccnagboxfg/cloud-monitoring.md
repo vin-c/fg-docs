@@ -6,6 +6,8 @@ Get the scripts from https://github.com/FranceGrilles/monitoring-cloud
 
 `git clone https://github.com/FranceGrilles/monitoring-cloud.git /usr/lib/monitoring-cloud`
 
+Don't forget to configure it ! See README.md file inside the repository.
+
 ## Nagios configuration
 
 Update nagios configuration with the following.
