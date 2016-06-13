@@ -305,7 +305,7 @@ chkconfig --add npcd
 chkconfig npcd on
 systemctl start npcd
 ```
-Create/Link the templates from `/etc/nagios/pnp4nagios-templates/check_openstack.php` 
+Create/Link the templates from `/etc/nagios/pnp4nagios/check_openstack.php` 
 ```
 # ls -l /usr/share/nagios/html/pnp4nagios/templates/    
 total 0
@@ -348,6 +348,23 @@ $def[2] .= "LINE1:nb_skipped#0000FF " ;
 $def[2] .= rrd::gprint("nb_skipped", array("LAST", "MAX", "AVERAGE"), "%3.0lf $UNIT[2]") ;
 ?>
 ```
+Create/Link the configuration from `/etc/nagios/pnp4nagios/check_openstack.cfg`
+```
+# ls -l /etc/pnp4nagios/check_commands
+lrwxrwxrwx 1 root root   42 13 juin  10:49 check_isolation.cfg -> /etc/nagios/pnp4nagios/check_openstack.cfg
+lrwxrwxrwx 1 root root   42 13 juin  10:49 check_openstack.cfg -> /etc/nagios/pnp4nagios/check_openstack.cfg
+lrwxrwxrwx 1 root root   42 13 juin  10:53 check_openstack_regex.cfg -> /etc/nagios/pnp4nagios/check_openstack.cfg
+```
+```
+# RRD Heartbeat in seconds
+# This Option is only used while creating new RRD Databases
+# Existing RRDs can be changed by "rrdtool tune"
+# More on http://oss.oetiker.ch/rrdtool/doc/rrdtune.en.html
+#
+# This value defaults to 8640
+RRD_HEARTBEAT = 129600
+```
+
 ### (Re)start services
 ```
 systemctl restart httpd nagios npcd
