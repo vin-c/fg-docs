@@ -1,4 +1,4 @@
-## Installation guide of ccnagboxfg
+# Installation guide of ccnagboxfg
 
 OS : CentOS7.2 x86_64
  
@@ -110,7 +110,7 @@ HDD : 40 Gib
   Block device           253:0
 ```
 
-### Basic Security
+## Basic Security
 
 ```
 systemctl enable firewalld
@@ -121,7 +121,7 @@ firewall-cmd --permanent --add-service http
 systemctl restart firewalld
 ```
 
-### Packages installation
+## Packages installation
 
 ```
 # Add EGI-Trustanchors repository
@@ -134,7 +134,7 @@ useradd -r -d /var/spool/nagios -s /sbin/nologin nagios
 yum update && yum install -y mod_ssl nagios nagios-plugins ca-policy-egi-core
 ```
 
-### Certificate request
+## Certificate request
 
 Follow the instructions here : https://igc.services.cnrs.fr/servercert/?CA=GRID2-FR
 
@@ -162,7 +162,7 @@ subject= /O=GRID-FR/C=FR/O=CNRS/OU=IdG/CN=ccnagboxfg.in2p3.fr
 
 ```
 
-### Nagios
+## Nagios
 
 Note : A git-repository is created/synced at `https://gitlab.in2p3.fr/vinc/nagboxfg-config` to track configuration changes
 
@@ -212,7 +212,7 @@ RedirectMatch ^/$ /nagios/
 </VirtualHost>
 
 ```
-## Bug double slash 
+### Bug double slash 
 See https://bugzilla.redhat.com/show_bug.cgi?id=1036331
 Update the file `/usr/share/nagios/html/config.inc.php`
 ```
@@ -228,7 +228,7 @@ Update the file `/usr/share/nagios/html/config.inc.php`
  
  // FILE LOCATION DEFAULTS
 ```
-### PerfData
+## PerfData
 
 We will be using pnp4nagios with its "Bulk mode with NPCD" configuration (https://docs.pnp4nagios.org/pnp-0.6/modes#bulk_mode_with_npcd)
 ```
@@ -379,7 +379,7 @@ lrwxrwxrwx 1 root root   42 13 juin  10:53 check_openstack_regex.cfg -> /etc/nag
 # This value defaults to 8640
 RRD_HEARTBEAT = 129600
 ```
-### (Re)start services
+## (Re)start services
 ```
 systemctl restart httpd nagios npcd
 ```
