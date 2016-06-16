@@ -367,5 +367,6 @@ RRD_HEARTBEAT = 129600
 
 ### (Re)start services
 ```
+systemctl enable httpd nagios npcd
 systemctl restart httpd nagios npcd
 ```
